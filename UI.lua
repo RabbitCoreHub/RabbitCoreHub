@@ -46,100 +46,22 @@ by RabbitCore Team
 
 local Release = "Prerelease Beta 6.1"
 
--- Create RabbitCore table if it doesn't exist
-local RabbitCore = _G.RabbitCore or {
-    Folder = "RabbitCore",
-    Options = {},
-    ThemeGradient = ColorSequence.new{
-        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(117, 164, 206)), 
-        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(123, 201, 201)), 
-        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(224, 138, 175))
-    }
+local RabbitCore = { 
+	Folder = "RabbitCore", 
+	Options = {},
+	AccentColor = Color3.fromRGB(0, 162, 255), -- Default accent color
+	ThemeGradient = ColorSequence.new{ColorSequenceKeypoint.new(0.00, Color3.fromRGB(117, 164, 206)), ColorSequenceKeypoint.new(0.50, Color3.fromRGB(123, 201, 201)), ColorSequenceKeypoint.new(1.00, Color3.fromRGB(224, 138, 175))} 
 }
 
--- Initialize default options
-local savedOptions = {} -- Will be loaded from save file if exists
-RabbitCore.Options = getgenv().RabbitCoreOptions or savedOptions or {}
-
--- Set default values if they don't exist
-RabbitCore.Options.AccentColor = typeof(RabbitCore.Options.AccentColor) == "Color3" and RabbitCore.Options.AccentColor or Color3.fromRGB(0, 162, 255)
-RabbitCore.Options.DarkTheme = RabbitCore.Options.DarkTheme ~= false
-
--- Set the accent color
-RabbitCore.AccentColor = RabbitCore.Options.AccentColor
-
--- Save settings function
-function RabbitCore:SaveSettings()
-    if not is_sirhurt_closure and syn and syn.request then
-        -- Use synapse's web API to save settings
-        syn.request({
-            Url = "http://www.roblox.com/Game/SetGlobalData",
-            Method = "POST",
-            Headers = {
-                ["Content-Type"] = "application/json",
-                ["Roblox-Place-Id"] = tostring(game.PlaceId)
-            },
-            Body = game:GetService("HttpService"):JSONEncode({
-                key = "RabbitCore_Options",
-                value = RabbitCore.Options
-            })
-        })
-    else
-        -- Fallback to global variable
-        getgenv().RabbitCoreOptions = RabbitCore.Options
-    end
-end
-
--- Load settings function
-local function loadSettings()
-    if not is_sirhurt_closure and syn and syn.request then
-        local success, result = pcall(function()
-            local response = syn.request({
-                Url = "http://www.roblox.com/Game/GetGlobalData",
-                Method = "POST",
-                Headers = {
-                    ["Content-Type"] = "application/json",
-                    ["Roblox-Place-Id"] = tostring(game.PlaceId)
-                },
-                Body = game:GetService("HttpService"):JSONEncode({
-                    key = "RabbitCore_Options"
-                })
-            })
-            return game:GetService("HttpService"):JSONDecode(response.Body).value
-        end)
-        
-        if success and result then
-            return result
-        end
-    end
-    
-    -- Fallback to global variable
-    return getgenv().RabbitCoreOptions or {}
-end
-
--- Load settings
-local loadedSettings = loadSettings()
-if loadedSettings and type(loadedSettings) == "table" then
-    RabbitCore.Options = loadedSettings
-    RabbitCore.AccentColor = loadedSettings.AccentColor or RabbitCore.AccentColor
-end
-
--- Expose RabbitCore globally
-_G.RabbitCore = RabbitCore
-_G.RabbitCoreOptions = RabbitCore.Options
-
 function RabbitCore:SetAccentColor(color)
-    -- Ensure color is a Color3
-    if typeof(color) == "Color3" then
-        self.AccentColor = color
-        self.Options.AccentColor = color  -- Update options as well
-        
-        -- Update UI elements that use the accent color
-        if self.MainWindow then
-            -- Update window title bar
-            if self.MainWindow.Title and self.MainWindow.Title.Line then
-                self.MainWindow.Title.Line.BackgroundColor3 = color
-            end
+	self.AccentColor = color
+	
+	-- Update UI elements that use the accent color
+	if self.MainWindow then
+		-- Update window title bar
+		if self.MainWindow.Title and self.MainWindow.Title.Line then
+			self.MainWindow.Title.Line.BackgroundColor3 = color
+		end
 		
 		-- Update buttons and toggles
 		for _, element in pairs(self.MainWindow:GetDescendants()) do
