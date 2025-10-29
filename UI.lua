@@ -2211,6 +2211,14 @@ local function Unhide(Window, currentTab)
 	Window.Size = SizeBleh
 	Window.Elements.Visible = true
 	Window.Visible = true
+	
+	-- Apply saved accent color if it exists
+	if RabbitCore.Options and RabbitCore.Options.AccentColor then
+		RabbitCore:SetAccentColor(RabbitCore.Options.AccentColor)
+	elseif WindowSettings.DefaultSettings and WindowSettings.DefaultSettings.AccentColor then
+		RabbitCore:SetAccentColor(WindowSettings.DefaultSettings.AccentColor)
+	end
+	
 	task.wait()
 	tween(Window, {BackgroundTransparency = 0.98}) -- Make more transparent
 	tween(Window.Elements, {BackgroundTransparency = 0.95}) -- Make more transparent
@@ -2279,7 +2287,12 @@ function RabbitCore:CreateWindow(WindowSettings)
 		ConfigSettings = {},
 
 		KeySystem = false,
-		KeySettings = {}
+		KeySettings = {},
+		
+		-- Add default settings
+		DefaultSettings = {
+			AccentColor = Color3.fromRGB(0, 162, 255) -- Default accent color
+		}
 	}, WindowSettings or {})
 
 	WindowSettings.ConfigSettings = Kwargify({
@@ -2544,7 +2557,118 @@ function RabbitCore:CreateWindow(WindowSettings)
 
 	local FirstTab = true
 
-	function Window:CreateHomeTab(HomeTabSettings)
+	-- Create Settings tab automatically when creating a window
+function Window:CreateSettingsTab()
+	local settingsTab = self:CreateTab({
+		Name = "Settings",
+		Icon = "settings",
+		ShowTitle = true
+	})
+	
+	-- Theme Settings Section
+	local themeSection = settingsTab:CreateSection("Theme Settings")
+	
+	-- Accent Color Picker
+	local colorPickerFrame = Instance.new("Frame")
+	colorPickerFrame.Size = UDim2.new(1, -20, 0, 140)
+	colorPickerFrame.BackgroundTransparency = 1
+	colorPickerFrame.Parent = themeSection
+	
+	local colorLabel = Instance.new("TextLabel")
+	colorLabel.Size = UDim2.new(1, 0, 0, 20)
+	colorLabel.BackgroundTransparency = 1
+	colorLabel.Text = "Accent Color"
+	colorLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	colorLabel.TextXAlignment = Enum.TextXAlignment.Left
+	colorLabel.Font = Enum.Font.Gotham
+	colorLabel.TextSize = 14
+	colorLabel.Parent = colorPickerFrame
+	
+	-- Color preview box
+	local colorPreview = Instance.new("Frame")
+	colorPreview.Size = UDim2.new(0, 40, 0, 40)
+	colorPreview.Position = UDim2.new(0, 0, 0, 30)
+	colorPreview.BackgroundColor3 = RabbitCore.AccentColor
+	colorPreview.BorderSizePixel = 0
+	colorPreview.Parent = colorPickerFrame
+	
+	-- Create sliders for RGB
+	local function createColorSlider(name, index, initialValue, updateCallback)
+		local slider = themeSection:CreateSlider({
+			Name = name,
+			Min = 0,
+			Max = 255,
+			CurrentValue = initialValue * 255,
+			Increment = 1,
+			Suffix = "",
+			Callback = function(value)
+				updateCallback(value / 255)
+				colorPreview.BackgroundColor3 = RabbitCore.AccentColor
+			end
+		})
+		return slider
+	end
+	
+	-- Create RGB sliders
+	createColorSlider("Red", 1, RabbitCore.AccentColor.R, function(value)
+		local color = Color3.new(value, RabbitCore.AccentColor.G, RabbitCore.AccentColor.B)
+		RabbitCore:SetAccentColor(color)
+	end)
+	
+	createColorSlider("Green", 2, RabbitCore.AccentColor.G, function(value)
+		local color = Color3.new(RabbitCore.AccentColor.R, value, RabbitCore.AccentColor.B)
+		RabbitCore:SetAccentColor(color)
+	end)
+	
+	createColorSlider("Blue", 3, RabbitCore.AccentColor.B, function(value)
+		local color = Color3.new(RabbitCore.AccentColor.R, RabbitCore.AccentColor.G, value)
+		RabbitCore:SetAccentColor(color)
+	end)
+	
+	-- Preset colors
+	local presetColors = {
+		Color3.fromRGB(0, 162, 255),  -- Default blue
+		Color3.fromRGB(0, 200, 83),   -- Green
+		Color3.fromRGB(255, 45, 85),  -- Pink
+		Color3.fromRGB(255, 149, 0),  -- Orange
+		Color3.fromRGB(175, 82, 222)  -- Purple
+	}
+	
+	local presetContainer = Instance.new("Frame")
+	presetContainer.Size = UDim2.new(1, 0, 0, 30)
+	presetContainer.Position = UDim2.new(0, 0, 0, 90)
+	presetContainer.BackgroundTransparency = 1
+	presetContainer.Parent = colorPickerFrame
+	
+	for i, color in ipairs(presetColors) do
+		local preset = Instance.new("TextButton")
+		preset.Size = UDim2.new(0.18, 0, 1, 0)
+		preset.Position = UDim2.new(0.2 * (i-1), 0, 0, 0)
+		preset.BackgroundColor3 = color
+		preset.BorderSizePixel = 0
+		preset.Text = ""
+		preset.Parent = presetContainer
+		
+		preset.MouseButton1Click:Connect(function()
+			RabbitCore:SetAccentColor(color)
+		end)
+	end
+	
+	-- Save settings button
+	themeSection:CreateButton({
+		Name = "Save Theme",
+		Callback = function()
+			RabbitCore.Options = RabbitCore.Options or {}
+			RabbitCore.Options.AccentColor = RabbitCore.AccentColor
+			RabbitCore:SaveSettings()
+			RabbitCore:Notify("Theme saved!")
+		end
+	})
+	
+	return settingsTab
+end
+
+function Window:CreateHomeTab(HomeTabSettings)
 
 		HomeTabSettings = Kwargify({
 			Icon = 1,
@@ -2714,6 +2838,9 @@ function RabbitCore:CreateWindow(WindowSettings)
 	end
 
 	function Window:CreateTab(TabSettings)
+		if type(TabSettings) == "string" then
+			TabSettings = {Name = TabSettings}
+		end
 
 		local Tab = {}
 
@@ -5549,16 +5676,19 @@ function RabbitCore:CreateWindow(WindowSettings)
 
 
 			function RabbitCore:CreateSettings()
-	local Settings = self:CreateTab("Settings")
+	local Settings = self:CreateTab({
+		Name = "Settings",
+		Icon = "settings"
+	})
 	
 	-- Theme Settings Section
-	self:CreateLabel(Settings, "Theme Settings")
+	local themeSection = Settings:CreateSection("Theme Settings")
 	
 	-- Accent Color Picker
 	local colorPickerFrame = Instance.new("Frame")
-	colorPickerFrame.Size = UDim2.new(1, -20, 0, 100)
+	colorPickerFrame.Size = UDim2.new(1, -20, 0, 140)
 	colorPickerFrame.BackgroundTransparency = 1
-	colorPickerFrame.Parent = Settings
+	colorPickerFrame.Parent = themeSection
 	
 	local colorLabel = self:CreateLabel(colorPickerFrame, "Accent Color")
 	colorLabel.Position = UDim2.new(0, 0, 0, 0)
@@ -5631,12 +5761,15 @@ function RabbitCore:CreateWindow(WindowSettings)
 	end
 	
 	-- Save settings button
-	self:CreateButton(Settings, "Save Theme", function()
-		-- Save the current accent color to the settings
-		self.Options.AccentColor = self.AccentColor
-		self:SaveSettings()
-		self:Notify("Theme saved!")
-	end)
+	themeSection:CreateButton({
+		Name = "Save Theme",
+		Callback = function()
+			-- Save the current accent color to the settings
+			self.Options.AccentColor = self.AccentColor
+			self:SaveSettings()
+			self:Notify("Theme saved!")
+		end
+	})
 	
 	return Settings
 end
