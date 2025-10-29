@@ -48,9 +48,31 @@ local Release = "Prerelease Beta 6.1"
 
 local RabbitCore = { 
 	Folder = "RabbitCore", 
-	Options = {}, 
+	Options = {},
+	AccentColor = Color3.fromRGB(0, 162, 255), -- Default accent color
 	ThemeGradient = ColorSequence.new{ColorSequenceKeypoint.new(0.00, Color3.fromRGB(117, 164, 206)), ColorSequenceKeypoint.new(0.50, Color3.fromRGB(123, 201, 201)), ColorSequenceKeypoint.new(1.00, Color3.fromRGB(224, 138, 175))} 
 }
+
+function RabbitCore:SetAccentColor(color)
+	self.AccentColor = color
+	
+	-- Update UI elements that use the accent color
+	if self.MainWindow then
+		-- Update window title bar
+		if self.MainWindow.Title and self.MainWindow.Title.Line then
+			self.MainWindow.Title.Line.BackgroundColor3 = color
+		end
+		
+		-- Update buttons and toggles
+		for _, element in pairs(self.MainWindow:GetDescendants()) do
+			if element:IsA("TextButton") and element.Name == "Button" then
+				element.BackgroundColor3 = color
+			elseif element:IsA("Frame") and element.Name == "Toggle" and element:FindFirstChild("Button") then
+				element.Button.BackgroundColor3 = color
+			end
+		end
+	end
+end
 
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -2190,8 +2212,8 @@ local function Unhide(Window, currentTab)
 	Window.Elements.Visible = true
 	Window.Visible = true
 	task.wait()
-	tween(Window, {BackgroundTransparency = 0.2})
-	tween(Window.Elements, {BackgroundTransparency = 0.08})
+	tween(Window, {BackgroundTransparency = 0.98}) -- Make more transparent
+	tween(Window.Elements, {BackgroundTransparency = 0.95}) -- Make more transparent
 	tween(Window.Line, {BackgroundTransparency = 0})
 	tween(Window.Title.Title, {TextTransparency = 0})
 	tween(Window.Title.subtitle, {TextTransparency = 0})
@@ -2290,6 +2312,7 @@ function RabbitCore:CreateWindow(WindowSettings)
 	Main.Logo.Image = "rbxassetid://" .. WindowSettings.LogoID
 	Main.Visible = true
 	Main.BackgroundTransparency = 1
+	Main.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Ensure background is black when transparent
 	Main.Size = MainSize
 	Main.Size = UDim2.fromOffset(Main.Size.X.Offset - 70, Main.Size.Y.Offset - 55)
 	Main.Parent.ShadowHolder.Size = Main.Size
@@ -5525,6 +5548,99 @@ function RabbitCore:CreateWindow(WindowSettings)
 			end)
 
 
+			function RabbitCore:CreateSettings()
+	local Settings = self:CreateTab("Settings")
+	
+	-- Theme Settings Section
+	self:CreateLabel(Settings, "Theme Settings")
+	
+	-- Accent Color Picker
+	local colorPickerFrame = Instance.new("Frame")
+	colorPickerFrame.Size = UDim2.new(1, -20, 0, 100)
+	colorPickerFrame.BackgroundTransparency = 1
+	colorPickerFrame.Parent = Settings
+	
+	local colorLabel = self:CreateLabel(colorPickerFrame, "Accent Color")
+	colorLabel.Position = UDim2.new(0, 0, 0, 0)
+	colorLabel.Size = UDim2.new(1, 0, 0, 20)
+	
+	-- Color preview box
+	local colorPreview = Instance.new("Frame")
+	colorPreview.Size = UDim2.new(0, 40, 0, 40)
+	colorPreview.Position = UDim2.new(0, 0, 0, 30)
+	colorPreview.BackgroundColor3 = self.AccentColor
+	colorPreview.BorderSizePixel = 0
+	colorPreview.Parent = colorPickerFrame
+	
+	-- Color sliders
+	local redSlider = self:CreateSlider(colorPickerFrame, "R: 255", 0, 255, self.AccentColor.R * 255, function(value)
+		local color = Color3.new(value/255, self.AccentColor.G, self.AccentColor.B)
+		self:SetAccentColor(color)
+		colorPreview.BackgroundColor3 = color
+	end)
+	redSlider.Position = UDim2.new(0, 50, 0, 30)
+	redSlider.Size = UDim2.new(1, -50, 0, 10)
+	
+	local greenSlider = self:CreateSlider(colorPickerFrame, "G: 255", 0, 255, self.AccentColor.G * 255, function(value)
+		local color = Color3.new(self.AccentColor.R, value/255, self.AccentColor.B)
+		self:SetAccentColor(color)
+		colorPreview.BackgroundColor3 = color
+	end)
+	greenSlider.Position = UDim2.new(0, 50, 0, 50)
+	greenSlider.Size = UDim2.new(1, -50, 0, 10)
+	
+	local blueSlider = self:CreateSlider(colorPickerFrame, "B: 255", 0, 255, self.AccentColor.B * 255, function(value)
+		local color = Color3.new(self.AccentColor.R, self.AccentColor.G, value/255)
+		self:SetAccentColor(color)
+		colorPreview.BackgroundColor3 = color
+	end)
+	blueSlider.Position = UDim2.new(0, 50, 0, 70)
+	blueSlider.Size = UDim2.new(1, -50, 0, 10)
+	
+	-- Preset colors
+	local presetColors = {
+		Color3.fromRGB(0, 162, 255),  -- Default blue
+		Color3.fromRGB(0, 200, 83),   -- Green
+		Color3.fromRGB(255, 45, 85),  -- Pink
+		Color3.fromRGB(255, 149, 0),  -- Orange
+		Color3.fromRGB(175, 82, 222)  -- Purple
+	}
+	
+	local presetContainer = Instance.new("Frame")
+	presetContainer.Size = UDim2.new(1, 0, 0, 30)
+	presetContainer.Position = UDim2.new(0, 0, 0, 90)
+	presetContainer.BackgroundTransparency = 1
+	presetContainer.Parent = colorPickerFrame
+	
+	for i, color in ipairs(presetColors) do
+		local preset = Instance.new("TextButton")
+		preset.Size = UDim2.new(0.18, 0, 1, 0)
+		preset.Position = UDim2.new(0.2 * (i-1), 0, 0, 0)
+		preset.BackgroundColor3 = color
+		preset.BorderSizePixel = 0
+		preset.Text = ""
+		preset.Parent = presetContainer
+		
+		preset.MouseButton1Click:Connect(function()
+			self:SetAccentColor(color)
+			colorPreview.BackgroundColor3 = color
+			redSlider:SetValue(color.R * 255)
+			greenSlider:SetValue(color.G * 255)
+			blueSlider:SetValue(color.B * 255)
+		end)
+	end
+	
+	-- Save settings button
+	self:CreateButton(Settings, "Save Theme", function()
+		-- Save the current accent color to the settings
+		self.Options.AccentColor = self.AccentColor
+		self:SaveSettings()
+		self:Notify("Theme saved!")
+	end)
+	
+	return Settings
+end
+
 			function InputV:Set(NewInputSettings)
 
 				NewInputSettings = Kwargify(InputSettings, NewInputSettings or {})
@@ -6574,6 +6690,15 @@ function RabbitCore:CreateWindow(WindowSettings)
 
 			local success, decoded = pcall(HttpService.JSONDecode, HttpService, readfile(file))
 			if not success then return false, "Unable to decode JSON data." end
+
+			-- Load accent color if it exists in the config
+			if decoded.accentColor then
+				self:SetAccentColor(Color3.fromRGB(
+					decoded.accentColor.R,
+					decoded.accentColor.G,
+					decoded.accentColor.B
+				))
+			end
 
 			for _, option in next, decoded.objects do
 				if ClassParser[option.type] then
