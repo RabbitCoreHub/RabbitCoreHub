@@ -2599,7 +2599,6 @@ function RabbitCore:CreateWindow(WindowSettings)
 
 		local function checkFriends()
 			if friendsCooldown == 0 then
-
 				friendsCooldown = 25
 
 				local playersFriends = {}
@@ -2607,28 +2606,26 @@ function RabbitCore:CreateWindow(WindowSettings)
 				local onlineFriends = 0 
 				local friendsInGame = 0 
 
-				local list = Players:GetFriendsAsync(Player.UserId)
-				while true do -- loop through all the pages
-					for _, data in list:GetCurrentPage() do
-						friendsInTotal +=1
-						table.insert(playersFriends, Data)
-					end
+				-- Safely get friends list
+				local success, result = pcall(function()
+					return Players:GetFriendsAsync(Players.LocalPlayer.UserId)
+				end)
 
-					if list.IsFinished then
-						-- stop the loop since this is the last page
-						break
-					else 
-						-- go to the next page
-						list:AdvanceToNextPageAsync()
-					end
-				end
-				for i, v in pairs(Player:GetFriendsOnline()) do
-					onlineFriends += 1
-				end
+				if success and result then
+					-- Process friends list
+					for _, friend in ipairs(result:GetCurrentPage()) do
+						friendsInTotal = friendsInTotal + 1
+						table.insert(playersFriends, friend)
 
-				for i,v in pairs(playersFriends) do
-					if Players:FindFirstChild(v.Username) then
-						friendsInGame = friendsInGame + 1
+						-- Check if friend is in game
+						if Players:FindFirstChild(friend.Username) then
+							friendsInGame = friendsInGame + 1
+						end
+						
+						-- Check if friend is online
+						if friend.IsOnline then
+							onlineFriends = onlineFriends + 1
+						end
 					end
 				end
 
