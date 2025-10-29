@@ -53,10 +53,59 @@ local RabbitCore = {
 	ThemeGradient = ColorSequence.new{ColorSequenceKeypoint.new(0.00, Color3.fromRGB(117, 164, 206)), ColorSequenceKeypoint.new(0.50, Color3.fromRGB(123, 201, 201)), ColorSequenceKeypoint.new(1.00, Color3.fromRGB(224, 138, 175))} 
 }
 
-function RabbitCore:SetAccentColor(color)
+function RabbitCore:SetAccentColor(color, noSave)
 	self.AccentColor = color
+	self.Options = self.Options or {}
+	self.Options.AccentColor = color
 	
-	-- Update UI elements that use the accent color
+	-- Update UI elements that use the accent color in real-time
+	for _, window in ipairs(self.Windows or {}) do
+		if window and window:FindFirstChild("Main") then
+			-- Update window accent elements
+			local accentElements = window.Main:GetDescendants()
+			for _, element in ipairs(accentElements) do
+				if element:IsA("Frame") and element.Name == "Accent" then
+					element.BackgroundColor3 = color
+					if element:FindFirstChild("UIStroke") then
+						element.UIStroke.Color = color
+					end
+				elseif element:IsA("UIStroke") and element.Name == "AccentStroke" then
+					element.Color = color
+				elseif element:IsA("TextButton") and element.Name == "TabButton" then
+					if element:FindFirstChild("UIStroke") then
+						element.UIStroke.Color = color
+					end
+				elseif element:IsA("Frame") and element.Name == "SliderFill" then
+					element.BackgroundColor3 = color
+				elseif element:IsA("TextButton") and element.Name == "Button" then
+					if element:FindFirstChild("UIStroke") then
+						element.UIStroke.Color = color
+					end
+				elseif element:IsA("TextBox") and element.Name == "InputBox" then
+					if element:FindFirstChild("UIStroke") then
+						element.UIStroke.Color = color
+					end
+				elseif element:IsA("Frame") and element.Name == "ToggleBackground" then
+					if element:FindFirstChild("UIStroke") then
+						element.UIStroke.Color = color
+					end
+					local fill = element:FindFirstChild("Fill")
+					if fill then
+						fill.BackgroundColor3 = color
+					end
+				end
+			end
+		end
+	end
+	
+	-- Save the color unless explicitly told not to
+	if not noSave then
+		task.spawn(function()
+			if self.SaveSettings then
+				self:SaveSettings()
+			end
+		end)
+	end
 	if self.MainWindow then
 		-- Update window title bar
 		if self.MainWindow.Title and self.MainWindow.Title.Line then
@@ -2649,20 +2698,32 @@ function Window:CreateSettingsTab()
 		return slider
 	end
 	
-	-- Create RGB sliders
+	-- Create RGB sliders with live updates
 	local redSlider = createColorSlider("Red", 1, RabbitCore.AccentColor.R, function(value)
 		local color = Color3.new(value, RabbitCore.AccentColor.G, RabbitCore.AccentColor.B)
-		RabbitCore:SetAccentColor(color)
+		-- Update preview immediately
+		colorPreview.BackgroundColor3 = color
+		-- Update sliders to reflect current color
+		greenSlider:SetValue(RabbitCore.AccentColor.G * 255)
+		blueSlider:SetValue(RabbitCore.AccentColor.B * 255)
+		-- Update accent color with noSave=true to prevent multiple saves during slider drag
+		RabbitCore:SetAccentColor(color, true)
 	end)
 	
 	local greenSlider = createColorSlider("Green", 2, RabbitCore.AccentColor.G, function(value)
 		local color = Color3.new(RabbitCore.AccentColor.R, value, RabbitCore.AccentColor.B)
-		RabbitCore:SetAccentColor(color)
+		colorPreview.BackgroundColor3 = color
+		redSlider:SetValue(RabbitCore.AccentColor.R * 255)
+		blueSlider:SetValue(RabbitCore.AccentColor.B * 255)
+		RabbitCore:SetAccentColor(color, true)
 	end)
 	
 	local blueSlider = createColorSlider("Blue", 3, RabbitCore.AccentColor.B, function(value)
 		local color = Color3.new(RabbitCore.AccentColor.R, RabbitCore.AccentColor.G, value)
-		RabbitCore:SetAccentColor(color)
+		colorPreview.BackgroundColor3 = color
+		redSlider:SetValue(RabbitCore.AccentColor.R * 255)
+		greenSlider:SetValue(RabbitCore.AccentColor.G * 255)
+		RabbitCore:SetAccentColor(color, true)
 	end)
 	
 	-- Preset colors
