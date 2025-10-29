@@ -2586,6 +2586,26 @@ function RabbitCore:CreateWindow(WindowSettings)
 
 		-- Stolen From Sirius Stuff Begins Here
 
+		-- Telegram Button
+		local TelegramButton = HomeTabPage.detailsholder.dashboard.Discord:Clone()
+		TelegramButton.Name = "Telegram"
+		TelegramButton.Position = UDim2.new(0, 0, 0, 60) -- Position below Discord button
+		TelegramButton.Parent = HomeTabPage.detailsholder.dashboard
+		TelegramButton.Image = "rbxassetid://6034736978" -- Telegram icon
+		
+		-- Update Discord button position if needed
+		HomeTabPage.detailsholder.dashboard.Discord.Position = UDim2.new(0, 0, 0, 0)
+
+		-- Telegram button click handler
+		TelegramButton.Interact.MouseButton1Click:Connect(function()
+			setclipboard("https://t.me/RabbitCoreScript")
+			RabbitCore:Notification({
+				Title = "Telegram",
+				Content = "Telegram link copied to clipboard!",
+				Duration = 3
+			})
+		end)
+
 		HomeTabPage.detailsholder.dashboard.Discord.Interact.MouseButton1Click:Connect(function()
 			-- Open Telegram link in browser
 			if request then
