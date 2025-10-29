@@ -1652,23 +1652,10 @@ function tween(object, goal, callback, tweenin)
 	tween:Play()
 end
 
+-- Disabled blur effect
 local function BlurModule(Frame)
-	local RunService = game:GetService('RunService')
-	local camera = workspace.CurrentCamera
-	local MTREL = "Glass"
-	local binds = {}
-	local root = Instance.new('Folder', camera)
-	root.Name = 'RabbitCoreBlur'
-
-	local gTokenMH = 99999999
-	local gToken = math.random(1, gTokenMH)
-
-	local DepthOfField = Instance.new('DepthOfFieldEffect', game:GetService('Lighting'))
-	DepthOfField.FarIntensity = 0
-	DepthOfField.FocusDistance = 51.6
-	DepthOfField.InFocusRadius = 50
-	DepthOfField.NearIntensity = 6
-	DepthOfField.Name = "DPT_"..gToken
+	-- Blur effect disabled as requested
+	return
 
 	local frame = Instance.new('Frame')
 	frame.Parent = Frame
@@ -2277,8 +2264,8 @@ function RabbitCore:CreateWindow(WindowSettings)
 
 	WindowSettings.KeySettings.SecondAction = Kwargify({
 		Enabled = false,
-		Type = "Discord", -- Link/Discord
-		Parameter = "" -- for discord, add the invite link like home tab. for link, type the link of ur key sys
+		Type = "Telegram", -- Link/Telegram
+		Parameter = "https://t.me/RabbitCoreScript" -- Telegram link
 	}, WindowSettings.KeySettings.SecondAction)
 
 	local Passthrough = false
@@ -2584,37 +2571,28 @@ function RabbitCore:CreateWindow(WindowSettings)
 			end
 		end
 
-		-- Stolen From Sirius Stuff Begins Here
+		-- RabbitCore UI Elements
 
-		-- Telegram Button
-		local TelegramButton = HomeTabPage.detailsholder.dashboard.Discord:Clone()
-		TelegramButton.Name = "Telegram"
-		TelegramButton.Position = UDim2.new(0, 0, 0, 60) -- Position below Discord button
-		TelegramButton.Parent = HomeTabPage.detailsholder.dashboard
-		TelegramButton.Image = "rbxassetid://6034736978" -- Telegram icon
-		
-		-- Update Discord button position if needed
-		HomeTabPage.detailsholder.dashboard.Discord.Position = UDim2.new(0, 0, 0, 0)
-
-		-- Telegram button click handler
-		TelegramButton.Interact.MouseButton1Click:Connect(function()
-			setclipboard("https://t.me/RabbitCoreScript")
-			RabbitCore:Notification({
-				Title = "Telegram",
-				Content = "Telegram link copied to clipboard!",
-				Duration = 3
-			})
-		end)
-
-		HomeTabPage.detailsholder.dashboard.Discord.Interact.MouseButton1Click:Connect(function()
-			-- Open Telegram link in browser
-			if request then
-				request({
-					Url = HomeTabSettings.DiscordInvite:find("^https?://") and HomeTabSettings.DiscordInvite or ("https://%s"):format(HomeTabSettings.DiscordInvite),
-					Method = 'GET'
-				})
+		-- Get the Discord button and convert it to Telegram
+		local DiscordButton = HomeTabPage.detailsholder.dashboard.Discord
+		if DiscordButton then
+			-- Update the button to be Telegram
+			DiscordButton.Image = "rbxassetid://6034736978" -- Telegram icon
+			
+			-- Update click handler for Telegram
+			for _, v in pairs(getconnections(DiscordButton.Interact.MouseButton1Click)) do
+				v:Disable()
 			end
-		end)
+			
+			DiscordButton.Interact.MouseButton1Click:Connect(function()
+				setclipboard("https://t.me/RabbitCoreScript")
+				RabbitCore:Notification({
+					Title = "RabbitCore",
+					Content = "Telegram link copied to clipboard!",
+					Duration = 3
+				})
+			end)
+		end
 
 		local friendsCooldown = 0
 		local function getPing() return math.clamp(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue(), 10, 700) end
@@ -6786,8 +6764,8 @@ if isStudio then
 			Key = {"Example Key"}, -- List of keys that will be accepted by the system, please use a system like Pelican or Luarmor that provide key strings based on your HWID since putting a simple string is very easy to bypass
 			SecondAction = {
 				Enabled = true,
-				Type = "Link", -- Link/Discord
-				Parameter = "" -- for discord, add the invite link like home tab. for link, type the link of ur key sys
+				Type = "Telegram", -- Link/Telegram
+				Parameter = "https://t.me/RabbitCoreScript" -- Telegram link
 			}
 		}
 	})
