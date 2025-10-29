@@ -2423,19 +2423,21 @@ function RabbitCore:CreateWindow(WindowSettings)
 			
 			Btn.Interact.MouseButton1Click:Connect(function()
 				if typesys == "Discord" then
-					setclipboard(tostring("https://discord.gg/"..KeySettings.SecondAction.Parameter)) -- Hunter if you see this I added copy also was too lazy to send u msg
+					local inviteCode = KeySettings.SecondAction.Parameter:gsub("^https?://discord%.gg/", "")
+					setclipboard(tostring("https://discord.gg/" .. inviteCode))
 					if request then
+						local inviteCode = KeySettings.SecondAction.Parameter:gsub("^https?://discord%.gg/", "")
 						request({
 							Url = 'http://127.0.0.1:6463/rpc?v=1',
 							Method = 'POST',
 							Headers = {
 								['Content-Type'] = 'application/json',
-								Origin = 'https://discord.com'
+								['Origin'] = 'https://discord.com',
 							},
 							Body = HttpService:JSONEncode({
 								cmd = 'INVITE_BROWSER',
 								nonce = HttpService:GenerateGUID(false),
-								args = {code = KeySettings.SecondAction.Parameter}
+								args = {code = inviteCode}
 							})
 						})
 					end
@@ -2554,7 +2556,7 @@ function RabbitCore:CreateWindow(WindowSettings)
 		HomeTabSettings = Kwargify({
 			Icon = 1,
 			SupportedExecutors = {"Vega X", "Delta", "Nihon", "Xeno"}, -- THESE DEFAULTS ARE PLACEHOLDERS!! I DO NOT ADVERTISE THESE, THEY ARE JUS THE FIRST THAT CAME TO MIND. I HAVE NO IDEA WHETHER THEYA RE RATS (they prob are) AND IM NOT RESPONSIBLE IF U GET VIRUSES FROM INSTALLING AFTER SEEING THIS LIST
-			DiscordInvite = "noinvitelink" -- The disvord invite link. Do not include the link so for example if my invite was discord.gg/nebula I would put nebula
+			DiscordInvite = "EcyXwrDx7j" -- The discord invite code (e.g., for discord.gg/EcyXwrDx7j, use just EcyXwrDx7j)
 		}, HomeTabSettings or {})
 
 		local HomeTab = {}
@@ -2615,19 +2617,21 @@ function RabbitCore:CreateWindow(WindowSettings)
 		-- Stolen From Sirius Stuff Begins Here
 
 		HomeTabPage.detailsholder.dashboard.Discord.Interact.MouseButton1Click:Connect(function()
-			setclipboard(tostring("https://discord.gg/"..HomeTabSettings.DiscordInvite)) -- Hunter if you see this I added copy also was too lazy to send u msg
+			local inviteCode = HomeTabSettings.DiscordInvite:gsub("^https?://discord%.gg/", "")
+			setclipboard(tostring("https://discord.gg/" .. inviteCode))
 			if request then
+				local inviteCode = HomeTabSettings.DiscordInvite:gsub("^https?://discord%.gg/", "")
 				request({
 					Url = 'http://127.0.0.1:6463/rpc?v=1',
 					Method = 'POST',
 					Headers = {
 						['Content-Type'] = 'application/json',
-						Origin = 'https://discord.com'
+						['Origin'] = 'https://discord.com',
 					},
 					Body = HttpService:JSONEncode({
 						cmd = 'INVITE_BROWSER',
 						nonce = HttpService:GenerateGUID(false),
-						args = {code = HomeTabSettings.DiscordInvite}
+						args = {code = inviteCode}
 					})
 				})
 			end
