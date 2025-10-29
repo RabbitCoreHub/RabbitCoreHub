@@ -2526,7 +2526,7 @@ function RabbitCore:CreateWindow(WindowSettings)
 		HomeTabSettings = Kwargify({
 			Icon = 1,
 			SupportedExecutors = {"Vega X", "Delta", "Nihon", "Xeno"}, -- THESE DEFAULTS ARE PLACEHOLDERS!! I DO NOT ADVERTISE THESE, THEY ARE JUS THE FIRST THAT CAME TO MIND. I HAVE NO IDEA WHETHER THEYA RE RATS (they prob are) AND IM NOT RESPONSIBLE IF U GET VIRUSES FROM INSTALLING AFTER SEEING THIS LIST
-			DiscordInvite = "noinvitelink" -- The disvord invite link. Do not include the link so for example if my invite was discord.gg/nebula I would put nebula
+			DiscordInvite = "https://t.me/RabbitCoreScript" -- Telegram channel link
 		}, HomeTabSettings or {})
 
 		local HomeTab = {}
@@ -2587,20 +2587,11 @@ function RabbitCore:CreateWindow(WindowSettings)
 		-- Stolen From Sirius Stuff Begins Here
 
 		HomeTabPage.detailsholder.dashboard.Discord.Interact.MouseButton1Click:Connect(function()
-			setclipboard(tostring("https://discord.gg/"..HomeTabSettings.DiscordInvite)) -- Hunter if you see this I added copy also was too lazy to send u msg
+			-- Open Telegram link in browser
 			if request then
 				request({
-					Url = 'http://127.0.0.1:6463/rpc?v=1',
-					Method = 'POST',
-					Headers = {
-						['Content-Type'] = 'application/json',
-						Origin = 'https://discord.com'
-					},
-					Body = HttpService:JSONEncode({
-						cmd = 'INVITE_BROWSER',
-						nonce = HttpService:GenerateGUID(false),
-						args = {code = HomeTabSettings.DiscordInvite}
-					})
+					Url = HomeTabSettings.DiscordInvite:find("^https?://") and HomeTabSettings.DiscordInvite or ("https://%s"):format(HomeTabSettings.DiscordInvite),
+					Method = 'GET'
 				})
 			end
 		end)
