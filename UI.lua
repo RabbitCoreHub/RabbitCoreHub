@@ -2212,6 +2212,23 @@ local function Unhide(Window, currentTab)
 	Window.Elements.Visible = true
 	Window.Visible = true
 	
+	-- Apply saved settings or defaults
+	if RabbitCore.Options then
+		if RabbitCore.Options.AccentColor then
+			RabbitCore:SetAccentColor(RabbitCore.Options.AccentColor)
+		end
+		if RabbitCore.Options.DarkTheme ~= nil then
+			-- Apply dark/light theme
+		end
+	else
+		-- Apply default settings
+		RabbitCore.Options = {}
+		RabbitCore.Options.AccentColor = WindowSettings.DefaultSettings.AccentColor
+		RabbitCore.Options.DarkTheme = WindowSettings.DefaultSettings.DarkTheme
+		RabbitCore:SetAccentColor(RabbitCore.Options.AccentColor)
+	end
+	
+	task.wait()
 	-- Apply saved accent color if it exists
 	if RabbitCore.Options and RabbitCore.Options.AccentColor then
 		RabbitCore:SetAccentColor(RabbitCore.Options.AccentColor)
@@ -2219,7 +2236,6 @@ local function Unhide(Window, currentTab)
 		RabbitCore:SetAccentColor(WindowSettings.DefaultSettings.AccentColor)
 	end
 	
-	task.wait()
 	tween(Window, {BackgroundTransparency = 0.98}) -- Make more transparent
 	tween(Window.Elements, {BackgroundTransparency = 0.95}) -- Make more transparent
 	tween(Window.Line, {BackgroundTransparency = 0})
@@ -2273,6 +2289,18 @@ local function Minimize(Window)
 	tween(Window, {Size = MinSize})
 end
 
+-- Initialize default settings when the script loads
+local function InitializeDefaultSettings()
+	if not RabbitCore.Options then
+		RabbitCore.Options = {
+			AccentColor = Color3.fromRGB(0, 162, 255),
+			DarkTheme = true
+		}
+	end
+end
+
+InitializeDefaultSettings()
+
 
 function RabbitCore:CreateWindow(WindowSettings)
 
@@ -2291,7 +2319,8 @@ function RabbitCore:CreateWindow(WindowSettings)
 		
 		-- Add default settings
 		DefaultSettings = {
-			AccentColor = Color3.fromRGB(0, 162, 255) -- Default accent color
+			AccentColor = Color3.fromRGB(0, 162, 255), -- Default accent color
+			DarkTheme = true -- Default to dark theme
 		}
 	}, WindowSettings or {})
 
@@ -2565,6 +2594,9 @@ function Window:CreateSettingsTab()
 		ShowTitle = true
 	})
 	
+	-- Apply saved settings or defaults
+	local settings = RabbitCore.Options or WindowSettings.DefaultSettings
+	
 	-- Theme Settings Section
 	local themeSection = settingsTab:CreateSection("Theme Settings")
 	
@@ -2604,23 +2636,31 @@ function Window:CreateSettingsTab()
 			Callback = function(value)
 				updateCallback(value / 255)
 				colorPreview.BackgroundColor3 = RabbitCore.AccentColor
+				-- Update sliders to reflect current color
+				if name == "Red" then
+					redSlider:SetValue(value)
+				elseif name == "Green" then
+					greenSlider:SetValue(value)
+				elseif name == "Blue" then
+					blueSlider:SetValue(value)
+				end
 			end
 		})
 		return slider
 	end
 	
 	-- Create RGB sliders
-	createColorSlider("Red", 1, RabbitCore.AccentColor.R, function(value)
+	local redSlider = createColorSlider("Red", 1, RabbitCore.AccentColor.R, function(value)
 		local color = Color3.new(value, RabbitCore.AccentColor.G, RabbitCore.AccentColor.B)
 		RabbitCore:SetAccentColor(color)
 	end)
 	
-	createColorSlider("Green", 2, RabbitCore.AccentColor.G, function(value)
+	local greenSlider = createColorSlider("Green", 2, RabbitCore.AccentColor.G, function(value)
 		local color = Color3.new(RabbitCore.AccentColor.R, value, RabbitCore.AccentColor.B)
 		RabbitCore:SetAccentColor(color)
 	end)
 	
-	createColorSlider("Blue", 3, RabbitCore.AccentColor.B, function(value)
+	local blueSlider = createColorSlider("Blue", 3, RabbitCore.AccentColor.B, function(value)
 		local color = Color3.new(RabbitCore.AccentColor.R, RabbitCore.AccentColor.G, value)
 		RabbitCore:SetAccentColor(color)
 	end)
@@ -2654,6 +2694,21 @@ function Window:CreateSettingsTab()
 		end)
 	end
 	
+	-- Theme Toggle
+	themeSection:CreateToggle({
+		Name = "Dark Theme",
+		CurrentValue = RabbitCore.Options.DarkTheme ~= false,
+		Callback = function(Value)
+			RabbitCore.Options.DarkTheme = Value
+			-- Apply dark/light theme here
+			if Value then
+				-- Apply dark theme
+			else
+				-- Apply light theme
+			end
+		end
+	})
+
 	-- Save settings button
 	themeSection:CreateButton({
 		Name = "Save Theme",
