@@ -46,22 +46,41 @@ by RabbitCore Team
 
 local Release = "Prerelease Beta 6.1"
 
+-- Create RabbitCore table with default values
 local RabbitCore = { 
-	Folder = "RabbitCore", 
-	Options = {},
-	AccentColor = Color3.fromRGB(0, 162, 255), -- Default accent color
-	ThemeGradient = ColorSequence.new{ColorSequenceKeypoint.new(0.00, Color3.fromRGB(117, 164, 206)), ColorSequenceKeypoint.new(0.50, Color3.fromRGB(123, 201, 201)), ColorSequenceKeypoint.new(1.00, Color3.fromRGB(224, 138, 175))} 
+    Folder = "RabbitCore", 
+    Options = {},
+    AccentColor = Color3.fromRGB(0, 162, 255), -- Default accent color
+    ThemeGradient = ColorSequence.new{
+        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(117, 164, 206)), 
+        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(123, 201, 201)), 
+        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(224, 138, 175))
+    }
 }
 
+-- Initialize default options
+RabbitCore.Options = RabbitCore.Options or {}
+RabbitCore.Options.AccentColor = RabbitCore.Options.AccentColor or RabbitCore.AccentColor
+RabbitCore.Options.DarkTheme = RabbitCore.Options.DarkTheme ~= false
+
+-- Update AccentColor to match options
+RabbitCore.AccentColor = RabbitCore.Options.AccentColor
+
+-- Expose RabbitCore globally
+_G.RabbitCore = RabbitCore
+
 function RabbitCore:SetAccentColor(color)
-	self.AccentColor = color
-	
-	-- Update UI elements that use the accent color
-	if self.MainWindow then
-		-- Update window title bar
-		if self.MainWindow.Title and self.MainWindow.Title.Line then
-			self.MainWindow.Title.Line.BackgroundColor3 = color
-		end
+    -- Ensure color is a Color3
+    if typeof(color) == "Color3" then
+        self.AccentColor = color
+        self.Options.AccentColor = color  -- Update options as well
+        
+        -- Update UI elements that use the accent color
+        if self.MainWindow then
+            -- Update window title bar
+            if self.MainWindow.Title and self.MainWindow.Title.Line then
+                self.MainWindow.Title.Line.BackgroundColor3 = color
+            end
 		
 		-- Update buttons and toggles
 		for _, element in pairs(self.MainWindow:GetDescendants()) do
