@@ -2598,45 +2598,59 @@ function RabbitCore:CreateWindow(WindowSettings)
 		local function getPing() return math.clamp(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue(), 10, 700) end
 
 		local function checkFriends()
-			if friendsCooldown == 0 then
-				friendsCooldown = 25
+			if friendsCooldown ~= 0 then
+				friendsCooldown = friendsCooldown - 1
+				return
+			end
 
-				local playersFriends = {}
+			friendsCooldown = 25
+
+			-- Safely update friend counts with error handling
+			local success, _ = pcall(function()
 				local friendsInTotal = 0
-				local onlineFriends = 0 
-				local friendsInGame = 0 
+				local onlineFriends = 0
+				local friendsInGame = 0
 
-				-- Safely get friends list
+				-- Get friends list with error handling
 				local success, result = pcall(function()
 					return Players:GetFriendsAsync(Players.LocalPlayer.UserId)
 				end)
 
 				if success and result then
-					-- Process friends list
-					for _, friend in ipairs(result:GetCurrentPage()) do
-						friendsInTotal = friendsInTotal + 1
-						table.insert(playersFriends, friend)
+					-- Get current page of friends
+					local success, currentPage = pcall(function()
+						return result:GetCurrentPage()
+					end)
 
-						-- Check if friend is in game
-						if Players:FindFirstChild(friend.Username) then
-							friendsInGame = friendsInGame + 1
-						end
-						
-						-- Check if friend is online
-						if friend.IsOnline then
-							onlineFriends = onlineFriends + 1
+					if success and currentPage then
+						for _, friend in ipairs(currentPage) do
+							if type(friend) == 'table' then
+								friendsInTotal = friendsInTotal + 1
+
+								-- Check if friend is online
+								if friend.IsOnline then
+									onlineFriends = onlineFriends + 1
+
+									-- Check if friend is in game
+									if friend.Username and Players:FindFirstChild(friend.Username) then
+										friendsInGame = friendsInGame + 1
+									end
+								end
+							end
 						end
 					end
 				end
 
-				HomeTabPage.detailsholder.dashboard.Friends.All.Value.Text = tostring(friendsInTotal).." friends"
-				HomeTabPage.detailsholder.dashboard.Friends.Offline.Value.Text = tostring(friendsInTotal - onlineFriends).." friends"
-				HomeTabPage.detailsholder.dashboard.Friends.Online.Value.Text = tostring(onlineFriends).." friends"
-				HomeTabPage.detailsholder.dashboard.Friends.InGame.Value.Text = tostring(friendsInGame).." friends"
+				-- Update UI elements safely
+				pcall(function()
+					HomeTabPage.detailsholder.dashboard.Friends.All.Value.Text = tostring(friendsInTotal).." friends"
+					HomeTabPage.detailsholder.dashboard.Friends.Offline.Value.Text = tostring(friendsInTotal - onlineFriends).." friends"
+					HomeTabPage.detailsholder.dashboard.Friends.Online.Value.Text = tostring(onlineFriends).." friends"
+					HomeTabPage.detailsholder.dashboard.Friends.InGame.Value.Text = tostring(friendsInGame).." friends"
+				end)
+			end)
 
-			else
-				friendsCooldown -= 1
-			end
+			-- Friends count update is now handled in the pcall above
 		end
 
 		local function format(Int)
