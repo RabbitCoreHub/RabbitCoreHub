@@ -2357,6 +2357,8 @@ function RabbitCore:CreateWindow(WindowSettings)
 		Name = "RabbitCore UI Example Window",
 		Subtitle = "",
 		LogoID = "6031097225",
+		DisableSettingsTab = false, -- Add option to disable settings tab
+		DisableSettingsTab = false, -- Allow disabling settings tab
 		LoadingEnabled = true,
 		LoadingTitle = "RabbitCore Interface Suite",
 		LoadingSubtitle = "by RabbitCore Team",
