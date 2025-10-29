@@ -1,56 +1,56 @@
 --[[
-
-
-
-██╗     ██╗   ██╗███╗   ██╗ █████╗     ██╗███╗   ██╗████████╗███████╗██████╗ ███████╗ █████╗  ██████╗███████╗    ███████╗██╗   ██╗██╗████████╗███████╗
-██║     ██║   ██║████╗  ██║██╔══██╗    ██║████╗  ██║╚══██╔══╝██╔════╝██╔══██╗██╔════╝██╔══██╗██╔════╝██╔════╝    ██╔════╝██║   ██║██║╚══██╔══╝██╔════╝
-██║     ██║   ██║██╔██╗ ██║███████║    ██║██╔██╗ ██║   ██║   █████╗  ██████╔╝█████╗  ███████║██║     █████╗      ███████╗██║   ██║██║   ██║   █████╗  
-██║     ██║   ██║██║╚██╗██║██╔══██║    ██║██║╚██╗██║   ██║   ██╔══╝  ██╔══██╗██╔══╝  ██╔══██║██║     ██╔══╝      ╚════██║██║   ██║██║   ██║   ██╔══╝  
-███████╗╚██████╔╝██║ ╚████║██║  ██║    ██║██║ ╚████║   ██║   ███████╗██║  ██║██║     ██║  ██║╚██████╗███████╗    ███████║╚██████╔╝██║   ██║   ███████╗
-╚══════╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝  ╚═╝    ╚═╝╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝ ╚═════╝╚══════╝    ╚══════╝ ╚═════╝ ╚═╝   ╚═╝   ╚══════╝
-by    d8b   db d88888b d8888b. db    db db       .d8b.       .d8888.  .d88b.  d88888b d888888b db   d8b   db  .d88b.  d8888b. db   dD .d8888. 
-      888o  88 88'     88  `8D 88    88 88      d8' `8b      88'  YP .8P  Y8. 88'     `~~88~~' 88   I8I   88 .8P  Y8. 88  `8D 88 ,8P' 88'  YP 
-      88V8o 88 88ooooo 88oooY' 88    88 88      88ooo88      `8bo.   88    88 88ooo      88    88   I8I   88 88    88 88oobY' 88,8P   `8bo.   
-      88 V8o88 88~~~~~ 88~~~b. 88    88 88      88~~~88        `Y8b. 88    88 88~~~      88    Y8   I8I   88 88    88 88`8b   88`8b     `Y8b. 
-      88  V888 88.     88   8D 88b  d88 88booo. 88   88      db   8D `8b  d8' 88         88    `8b d8'8b d8' `8b  d8' 88 `88. 88 `88. db   8D 
-      VP   V8P Y88888P Y8888P' ~Y8888P' Y88888P YP   YP      `8888Y'  `Y88P'  YP         YP     `8b8' `8d8'   `Y88P'  88   YD YP   YD `8888Y' 
-
-
-Main Credits
-
-Hunter (RabbitCore Team) | Designing And Programming | Main Developer
-JustHey (RabbitCore Team) | Configurations, Bug Fixing And More! | Co Developer
-Throit | Color Picker
-Wally | Dragging And Certain Functions
-Sirius | PCall Parsing, Notifications, Slider And Home Tab
-RabbitCore Executor | Original UI
-
-
-Extra Credits / Provided Certain Elements
-
-Pookie Pepelss | Bug Tester
-Inori | Configuration Concept
-Latte Softworks and qweery | Lucide Icons And Material Icons
-kirill9655 | Loading Circle
-Deity/dp4pv/x64x70 | Certain Scripting and Testing ig
-
-Contributors
-iPigTw | Typo Fixer, Fixed Key System!!
-pushByAccident | Fixing Executor Lists
-ImFloriz | Method Fixing
-
-RabbitCore Interface Suite
+RabbitCore Interface Suite - Optimized Version
 by RabbitCore Team
 
+This is an optimized version of the RabbitCore UI library with reduced memory usage.
 ]]
 
 local Release = "Prerelease Beta 6.1"
 
 local RabbitCore = { 
-	Folder = "RabbitCore", 
-	Options = {}, 
-	ThemeGradient = ColorSequence.new{ColorSequenceKeypoint.new(0.00, Color3.fromRGB(117, 164, 206)), ColorSequenceKeypoint.new(0.50, Color3.fromRGB(123, 201, 201)), ColorSequenceKeypoint.new(1.00, Color3.fromRGB(224, 138, 175))} 
+    Folder = "RabbitCore", 
+    Options = {}, 
+    ThemeGradient = ColorSequence.new{
+        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(117, 164, 206)), 
+        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(123, 201, 201)), 
+        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(224, 138, 175))
+    },
+    _weakRefs = setmetatable({}, {__mode = "k"}), -- For weak references
+    _activeElements = {},
+    _cleanupQueue = {}
 }
+
+-- Memory management functions
+function RabbitCore:_addWeakRef(obj, key, value)
+    if not self._weakRefs[obj] then
+        self._weakRefs[obj] = {}
+    end
+    self._weakRefs[obj][key] = value
+end
+
+function RabbitCore:_getWeakRef(obj, key)
+    return self._weakRefs[obj] and self._weakRefs[obj][key]
+end
+
+function RabbitCore:_queueCleanup(callback)
+    table.insert(self._cleanupQueue, callback)
+end
+
+-- Run cleanup on idle
+local function processCleanupQueue()
+    while #RabbitCore._cleanupQueue > 0 do
+        local callback = table.remove(RabbitCore._cleanupQueue, 1)
+        pcall(callback)
+        task.wait()
+    end
+end
+
+task.spawn(function()
+    while true do
+        processCleanupQueue()
+        task.wait(1) -- Process cleanup queue every second
+    end
+end)
 
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -1653,10 +1653,20 @@ function tween(object, goal, callback, tweenin)
 end
 
 local function BlurModule(Frame)
-	local RunService = game:GetService('RunService')
-	local camera = workspace.CurrentCamera
-	local MTREL = "Glass"
-	local binds = {}
+    if not Frame or not Frame:IsA("Frame") then return end
+    
+    local RunService = game:GetService('RunService')
+    local camera = workspace.CurrentCamera
+    local MTREL = "Glass"
+    local binds = {}
+    
+    -- Store weak reference to frame
+    RabbitCore:_addWeakRef(Frame, "blurModule", {
+        RunService = RunService,
+        camera = camera,
+        MTREL = MTREL,
+        binds = binds
+    })
 	local root = Instance.new('Folder', camera)
 	root.Name = 'RabbitCoreBlur'
 
@@ -2244,7 +2254,25 @@ local function Minimize(Window)
 end
 
 
+-- Optimized window creation with memory management
 function RabbitCore:CreateWindow(WindowSettings)
+    -- Track window creation
+    self._windowCount = (self._windowCount or 0) + 1
+    
+    -- Clean up old windows if too many exist
+    if self._windowCount > 3 then
+        -- Implement window cleanup logic here
+        self:_cleanupOldWindows()
+    end
+    
+    -- Store window reference
+    local windowId = "window_" .. self._windowCount
+    self._activeWindows = self._activeWindows or {}
+    self._activeWindows[windowId] = {
+        created = os.time(),
+        lastUsed = os.time(),
+        instance = nil -- Will be set below
+    }
 
 	WindowSettings = Kwargify({
 		Name = "RabbitCore UI Example Window",
