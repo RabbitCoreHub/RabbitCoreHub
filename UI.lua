@@ -20,6 +20,9 @@ local RabbitCore = {
     _cleanupQueue = {}
 }
 
+-- Performance toggles: set to false to disable expensive visual modules that may cause framerate drops
+local ENABLE_BLUR_MODULE = false
+
 -- Memory management functions
 function RabbitCore:_addWeakRef(obj, key, value)
     if not self._weakRefs[obj] then
@@ -1653,7 +1656,11 @@ function tween(object, goal, callback, tweenin)
 end
 
 local function BlurModule(Frame)
-    if not Frame or not Frame:IsA("Frame") then return end
+	-- Performance guard: avoid running the expensive blur geometry renderer when disabled
+	if not ENABLE_BLUR_MODULE then
+		return
+	end
+	if not Frame or not Frame:IsA("Frame") then return end
     
     local RunService = game:GetService('RunService')
     local camera = workspace.CurrentCamera
