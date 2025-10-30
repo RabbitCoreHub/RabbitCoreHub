@@ -7,9 +7,15 @@ This is an optimized version of the RabbitCore UI library with reduced memory us
 
 local Release = "Prerelease Beta 6.1"
 
-local RabbitCore = { 
+local RabbitCore = setmetatable({
     Folder = "RabbitCore", 
-    Options = {}, 
+    Options = {},
+    _performance = {
+        Disable3DBlur = false, -- Set to true to use lightweight blur
+        DisableAnimations = false, -- Set to true to disable most animations
+        LowMemoryMode = false, -- Set to true to disable some visual effects
+        ReduceRenderSteps = false -- Set to true to reduce render step bindings
+    },
     ThemeGradient = ColorSequence.new{
         ColorSequenceKeypoint.new(0.00, Color3.fromRGB(117, 164, 206)), 
         ColorSequenceKeypoint.new(0.50, Color3.fromRGB(123, 201, 201)), 
@@ -37,12 +43,37 @@ function RabbitCore:_queueCleanup(callback)
 end
 
 -- Run cleanup on idle
+-- Memory management
 local function processCleanupQueue()
     while #RabbitCore._cleanupQueue > 0 do
         local callback = table.remove(RabbitCore._cleanupQueue, 1)
         pcall(callback)
         task.wait()
     end
+end
+
+function RabbitCore:_cleanupElement(element)
+    if not element then return end
+    
+    -- Remove from active elements
+    self._activeElements[element] = nil
+    
+    -- Disconnect all events
+    if self._weakRefs[element] then
+        for _, connection in pairs(self._weakRefs[element]) do
+            if typeof(connection) == "RBXScriptConnection" and connection.Connected then
+                connection:Disconnect()
+            end
+        end
+        self._weakRefs[element] = nil
+    end
+    
+    -- Queue UI element removal
+    self:_queueCleanup(function()
+        if element and element.Parent then
+            element:Destroy()
+        end
+    end)
 end
 
 task.spawn(function()
@@ -52,10 +83,65 @@ task.spawn(function()
     end
 end)
 
+-- Performance optimization functions
+function RabbitCore:SetPerformanceMode(options)
+    if type(options) ~= "table" then return end
+    for key, value in pairs(options) do
+        if self._performance[key] ~= nil then
+            self._performance[key] = value
+        end
+    end
+end
+
+function RabbitCore:EnableLowMemoryMode()
+    self:SetPerformanceMode({
+        Disable3DBlur = true,
+        DisableAnimations = true,
+        LowMemoryMode = true,
+        ReduceRenderSteps = true
+    })
+end
+
+-- Helper function for safe image assignment
+local function SafeAssignImage(instance, imageId, type)
+    if not instance then return end
+    
+    if type == "Custom" then
+        if typeof(imageId) == "string" and (imageId:match("^rbxassetid://") or imageId:match("^http")) then
+            instance.Image = imageId
+        elseif type(imageId) == "number" then
+            instance.Image = "rbxassetid://" .. tostring(imageId)
+        end
+    else
+        local iconModule = type == "Lucide" and IconModule.Lucide or IconModule.Material
+        if iconModule and iconModule[imageId] then
+            instance.Image = iconModule[imageId]
+        end
+    end
+end
+
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
+
+-- Lightweight blur implementation
+local function CreateLightweightBlur(parent)
+    if RabbitCore._performance.Disable3DBlur then
+        local blur = Instance.new("Frame")
+        blur.Size = UDim2.fromScale(1, 1)
+        blur.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        blur.BackgroundTransparency = 0.5
+        blur.BorderSizePixel = 0
+        blur.Parent = parent
+        return blur
+    else
+        local blur = Instance.new("BlurEffect")
+        blur.Size = 20
+        blur.Parent = game:GetService("Lighting")
+        return blur
+    end
+end
 local Localization = game:GetService("LocalizationService")
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
@@ -6676,7 +6762,12 @@ function RabbitCore:CreateWindow(WindowSettings)
 
 				local success, err = RabbitCore:LoadConfig(name)
 				if not success then
-					return RabbitCore:Notification({
+					-- Make RabbitCore callable
+return setmetatable(RabbitCore, {
+    __call = function(self, ...)
+        return self:CreateWindow(...)
+    end
+}):Notification({
 						Title = "Interface",
 						Icon = "sparkle",
 						ImageSource = "Material",
