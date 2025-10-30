@@ -7046,4 +7046,15 @@ end
     t1:CreateDropdown({Callback = function(t) print(unpack(t)) end})
     t1:CreateDropdown({Description = "Special Type - Player", Callback = "", SpecialType = "Player"})
 end]]--
-return RabbitCore
+-- Make the returned object callable for a small convenience API.
+-- This keeps backwards compatibility (RabbitCore:CreateWindow(...)) but also
+-- allows the common pattern used by libraries like Rayfield:
+-- local UI = loadstring(game:HttpGet("..."))()
+-- local Window = UI({ Name = "My Window" }) -- directly creates a window
+local Public = setmetatable(RabbitCore, {
+	__call = function(self, WindowSettings)
+		return self:CreateWindow(WindowSettings)
+	end,
+})
+
+return Public
