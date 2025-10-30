@@ -1621,6 +1621,41 @@ local function GetIcon(icon, source)
 	end
 end
 
+-- Safely assign image results from GetIcon to an ImageLabel/Image object.
+local function SafeAssignImage(ImageObject, icon, source)
+	if not ImageObject then return end
+	local ok, res = pcall(function() return GetIcon(icon, source) end)
+	if not ok or res == nil then
+		-- If icon lookup failed, hide the image (don't assign nil)
+		pcall(function()
+			ImageObject.Image = ""
+			ImageObject.Visible = false
+		end)
+		return
+	end
+
+	if type(res) == "table" then
+		-- Lucide-style asset table { id = number, imageRectSize = Vector2, imageRectOffset = Vector2 }
+		pcall(function()
+			ImageObject.Image = "rbxassetid://" .. tostring(res.id)
+			if res.imageRectSize then ImageObject.ImageRectSize = res.imageRectSize end
+			if res.imageRectOffset then ImageObject.ImageRectOffset = res.imageRectOffset end
+			ImageObject.Visible = true
+		end)
+	elseif type(res) == "string" then
+		pcall(function()
+			ImageObject.Image = res
+			ImageObject.Visible = true
+		end)
+	else
+		-- Fallback: coerce to string
+		pcall(function()
+			ImageObject.Image = tostring(res)
+			ImageObject.Visible = true
+		end)
+	end
+end
+
 local function RemoveTable(tablre, value)
 	for i,v in pairs(tablre) do
 		if tostring(v) == tostring(value) then
@@ -2131,10 +2166,11 @@ function RabbitCore:Notification(data) -- action e.g open messages
 		newNotification.Visible = false
 		BlurModule(newNotification)
 
-		-- Set Data
-		newNotification.Title.Text = data.Title
-		newNotification.Description.Text = data.Content 
-		newNotification.Icon.Image = GetIcon(data.Icon, data.ImageSource)
+	-- Set Data
+	newNotification.Title.Text = tostring(data.Title)
+	newNotification.Description.Text = tostring(data.Content)
+	-- Safely assign icon (prevents nil/table assignment errors)
+	SafeAssignImage(newNotification.Icon, data.Icon, data.ImageSource)
 
 		-- Set initial transparency values
 		newNotification.BackgroundTransparency = 1
@@ -2313,8 +2349,8 @@ function RabbitCore:CreateWindow(WindowSettings)
 
 	local Window = { Bind = Enum.KeyCode.K, CurrentTab = nil, State = true, Size = false, Settings = nil }
 
-	Main.Title.Title.Text = WindowSettings.Name
-	Main.Title.subtitle.Text = WindowSettings.Subtitle
+	Main.Title.Title.Text = tostring(WindowSettings.Name)
+	Main.Title.subtitle.Text = tostring(WindowSettings.Subtitle)
 	Main.Logo.Image = "rbxassetid://" .. WindowSettings.LogoID
 	Main.Visible = true
 	Main.BackgroundTransparency = 1
@@ -2329,8 +2365,8 @@ function RabbitCore:CreateWindow(WindowSettings)
 	tween(Elements.Parent, {BackgroundTransparency = 1})
 	Elements.Parent.Visible = false
 
-	LoadingFrame.Frame.Frame.Title.Text = WindowSettings.LoadingTitle
-	LoadingFrame.Frame.Frame.Subtitle.Text = WindowSettings.LoadingSubtitle
+	LoadingFrame.Frame.Frame.Title.Text = tostring(WindowSettings.LoadingTitle)
+	LoadingFrame.Frame.Frame.Subtitle.Text = tostring(WindowSettings.LoadingSubtitle)
 	LoadingFrame.Version.Text = LoadingFrame.Frame.Frame.Title.Text == "RabbitCore Interface Suite" and Release or "RabbitCore UI"
 
 	Navigation.Player.icon.ImageLabel.Image = Players:GetUserThumbnailAsync(Players.LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
@@ -2564,7 +2600,7 @@ function RabbitCore:CreateWindow(WindowSettings)
 		local HomeTabButton = Navigation.Tabs.Home
 		HomeTabButton.Visible = true
 		if HomeTabSettings.Icon == 2 then
-			HomeTabButton.ImageLabel.Image = GetIcon("dashboard", "Material")
+			SafeAssignImage(HomeTabButton.ImageLabel, "dashboard", "Material")
 		end
 
 		local HomeTabPage = Elements.Home
@@ -2735,17 +2771,17 @@ function RabbitCore:CreateWindow(WindowSettings)
 
 		local TabButton = Navigation.Tabs["InActive Template"]:Clone()
 
-		TabButton.Name = TabSettings.Name
-		TabButton.TextLabel.Text = TabSettings.Name
+	TabButton.Name = tostring(TabSettings.Name)
+	TabButton.TextLabel.Text = tostring(TabSettings.Name)
 		TabButton.Parent = Navigation.Tabs
-		TabButton.ImageLabel.Image = GetIcon(TabSettings.Icon, TabSettings.ImageSource)
+	SafeAssignImage(TabButton.ImageLabel, TabSettings.Icon, TabSettings.ImageSource)
 
 		TabButton.Visible = true
 
 		local TabPage = Elements.Template:Clone()
 		TabPage.Name = TabSettings.Name
-		TabPage.Title.Visible = TabSettings.ShowTitle
-		TabPage.Title.Text = TabSettings.Name
+	TabPage.Title.Visible = TabSettings.ShowTitle
+	TabPage.Title.Text = tostring(TabSettings.Name)
 		TabPage.Visible = true
 
 		Tab.Page = TabPage
@@ -2797,16 +2833,22 @@ function RabbitCore:CreateWindow(WindowSettings)
 		FirstTab = false
 
 		-- Section
-		function Tab:CreateSection(name : string)
+		function Tab:CreateSection(name)
 
 			local Section = {}
 
-			if name == nil then name = "Section" end
+			-- Accept either a string or a table { Name = "..." }
+			local sectionName
+			if type(name) == "table" then
+				sectionName = tostring(name.Name or name.Text or "Section")
+			else
+				sectionName = tostring(name or "Section")
+			end
 
-			Section.Name = name
+			Section.Name = sectionName
 
 			local Sectiont = Elements.Template.Section:Clone()
-			Sectiont.Text = name
+			Sectiont.Text = sectionName
 			Sectiont.Visible = true
 			Sectiont.Parent = TabPage
 			local TabPage = Sectiont.Frame
@@ -2815,7 +2857,13 @@ function RabbitCore:CreateWindow(WindowSettings)
 			tween(Sectiont, {TextTransparency = 0})
 
 			function Section:Set(NewSection)
-				Sectiont.Text = NewSection
+				if type(NewSection) == "table" then
+					Sectiont.Text = tostring(NewSection.Name or NewSection.Text or NewSection)
+					Section.Name = tostring(NewSection.Name or NewSection.Text or NewSection)
+				else
+					Sectiont.Text = tostring(NewSection)
+					Section.Name = tostring(NewSection)
+				end
 			end
 
 			function Section:Destroy()
@@ -2856,10 +2904,10 @@ function RabbitCore:CreateWindow(WindowSettings)
 				else
 					Button = Elements.Template.ButtonDesc:Clone()
 				end
-				Button.Name = ButtonSettings.Name
-				Button.Title.Text = ButtonSettings.Name
-				if ButtonSettings.Description ~= nil and ButtonSettings.Description ~= "" then
-					Button.Desc.Text = ButtonSettings.Description
+				Button.Name = tostring(ButtonSettings.Name)
+				Button.Title.Text = tostring(ButtonSettings.Name)
+				if ButtonSettings.Description ~= nil and ButtonSettings.Description ~= "" and Button.Desc ~= nil then
+					Button.Desc.Text = tostring(ButtonSettings.Description)
 				end
 				Button.Visible = true
 				Button.Parent = TabPage
@@ -2887,7 +2935,7 @@ function RabbitCore:CreateWindow(WindowSettings)
 						Button.Title.Text = "Callback Error"
 						print("RabbitCore Interface Suite | "..ButtonSettings.Name.." Callback Error " ..tostring(Response))
 						wait(0.5)
-						Button.Title.Text = ButtonSettings.Name
+						Button.Title.Text = tostring(ButtonSettings.Name)
 						TweenService:Create(Button, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.5}):Play()
 						TweenService:Create(Button, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(32, 30, 38)}):Play()
 						TweenService:Create(Button.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0.5}):Play()
@@ -2922,10 +2970,10 @@ function RabbitCore:CreateWindow(WindowSettings)
 					ButtonSettings = ButtonSettings2
 					ButtonV.Settings = ButtonSettings2
 
-					Button.Name = ButtonSettings.Name
-					Button.Title.Text = ButtonSettings.Name
+					Button.Name = tostring(ButtonSettings.Name)
+					Button.Title.Text = tostring(ButtonSettings.Name)
 					if ButtonSettings.Description ~= nil and ButtonSettings.Description ~= "" and Button.Desc ~= nil then
-						Button.Desc.Text = ButtonSettings.Description
+						Button.Desc.Text = tostring(ButtonSettings.Description)
 					end
 				end
 
