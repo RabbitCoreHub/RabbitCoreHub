@@ -2351,7 +2351,8 @@ function RabbitCore:CreateWindow(WindowSettings)
 
 	Main.Title.Title.Text = tostring(WindowSettings.Name)
 	Main.Title.subtitle.Text = tostring(WindowSettings.Subtitle)
-	Main.Logo.Image = "rbxassetid://" .. WindowSettings.LogoID
+	-- Use SafeAssignImage for the main logo so numeric/custom ids and lucide tables work
+	SafeAssignImage(Main.Logo, WindowSettings.LogoID, "Custom")
 	Main.Visible = true
 	Main.BackgroundTransparency = 1
 	Main.Size = MainSize
