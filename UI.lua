@@ -1621,41 +1621,6 @@ local function GetIcon(icon, source)
 	end
 end
 
--- Safely assign image results from GetIcon to an ImageLabel/Image object.
-local function SafeAssignImage(ImageObject, icon, source)
-	if not ImageObject then return end
-	local ok, res = pcall(function() return GetIcon(icon, source) end)
-	if not ok or res == nil then
-		-- If icon lookup failed, hide the image (don't assign nil)
-		pcall(function()
-			ImageObject.Image = ""
-			ImageObject.Visible = false
-		end)
-		return
-	end
-
-	if type(res) == "table" then
-		-- Lucide-style asset table { id = number, imageRectSize = Vector2, imageRectOffset = Vector2 }
-		pcall(function()
-			ImageObject.Image = "rbxassetid://" .. tostring(res.id)
-			if res.imageRectSize then ImageObject.ImageRectSize = res.imageRectSize end
-			if res.imageRectOffset then ImageObject.ImageRectOffset = res.imageRectOffset end
-			ImageObject.Visible = true
-		end)
-	elseif type(res) == "string" then
-		pcall(function()
-			ImageObject.Image = res
-			ImageObject.Visible = true
-		end)
-	else
-		-- Fallback: coerce to string
-		pcall(function()
-			ImageObject.Image = tostring(res)
-			ImageObject.Visible = true
-		end)
-	end
-end
-
 local function RemoveTable(tablre, value)
 	for i,v in pairs(tablre) do
 		if tostring(v) == tostring(value) then
@@ -7081,15 +7046,4 @@ end
     t1:CreateDropdown({Callback = function(t) print(unpack(t)) end})
     t1:CreateDropdown({Description = "Special Type - Player", Callback = "", SpecialType = "Player"})
 end]]--
--- Make the returned object callable for a small convenience API.
--- This keeps backwards compatibility (RabbitCore:CreateWindow(...)) but also
--- allows the common pattern used by libraries like Rayfield:
--- local UI = loadstring(game:HttpGet("..."))()
--- local Window = UI({ Name = "My Window" }) -- directly creates a window
-local Public = setmetatable(RabbitCore, {
-	__call = function(self, WindowSettings)
-		return self:CreateWindow(WindowSettings)
-	end,
-})
-
-return Public
+return RabbitCore
