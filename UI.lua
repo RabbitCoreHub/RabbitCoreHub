@@ -7,15 +7,9 @@ This is an optimized version of the RabbitCore UI library with reduced memory us
 
 local Release = "Prerelease Beta 6.1"
 
-local RabbitCore = setmetatable({
+local RabbitCore = { 
     Folder = "RabbitCore", 
-    Options = {},
-    _performance = {
-        Disable3DBlur = false, -- Set to true to use lightweight blur
-        DisableAnimations = false, -- Set to true to disable most animations
-        LowMemoryMode = false, -- Set to true to disable some visual effects
-        ReduceRenderSteps = false -- Set to true to reduce render step bindings
-    },
+    Options = {}, 
     ThemeGradient = ColorSequence.new{
         ColorSequenceKeypoint.new(0.00, Color3.fromRGB(117, 164, 206)), 
         ColorSequenceKeypoint.new(0.50, Color3.fromRGB(123, 201, 201)), 
@@ -43,37 +37,12 @@ function RabbitCore:_queueCleanup(callback)
 end
 
 -- Run cleanup on idle
--- Memory management
 local function processCleanupQueue()
     while #RabbitCore._cleanupQueue > 0 do
         local callback = table.remove(RabbitCore._cleanupQueue, 1)
         pcall(callback)
         task.wait()
     end
-end
-
-function RabbitCore:_cleanupElement(element)
-    if not element then return end
-    
-    -- Remove from active elements
-    self._activeElements[element] = nil
-    
-    -- Disconnect all events
-    if self._weakRefs[element] then
-        for _, connection in pairs(self._weakRefs[element]) do
-            if typeof(connection) == "RBXScriptConnection" and connection.Connected then
-                connection:Disconnect()
-            end
-        end
-        self._weakRefs[element] = nil
-    end
-    
-    -- Queue UI element removal
-    self:_queueCleanup(function()
-        if element and element.Parent then
-            element:Destroy()
-        end
-    end)
 end
 
 task.spawn(function()
@@ -83,65 +52,10 @@ task.spawn(function()
     end
 end)
 
--- Performance optimization functions
-function RabbitCore:SetPerformanceMode(options)
-    if type(options) ~= "table" then return end
-    for key, value in pairs(options) do
-        if self._performance[key] ~= nil then
-            self._performance[key] = value
-        end
-    end
-end
-
-function RabbitCore:EnableLowMemoryMode()
-    self:SetPerformanceMode({
-        Disable3DBlur = true,
-        DisableAnimations = true,
-        LowMemoryMode = true,
-        ReduceRenderSteps = true
-    })
-end
-
--- Helper function for safe image assignment
-local function SafeAssignImage(instance, imageId, type)
-    if not instance then return end
-    
-    if type == "Custom" then
-        if typeof(imageId) == "string" and (imageId:match("^rbxassetid://") or imageId:match("^http")) then
-            instance.Image = imageId
-        elseif type(imageId) == "number" then
-            instance.Image = "rbxassetid://" .. tostring(imageId)
-        end
-    else
-        local iconModule = type == "Lucide" and IconModule.Lucide or IconModule.Material
-        if iconModule and iconModule[imageId] then
-            instance.Image = iconModule[imageId]
-        end
-    end
-end
-
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
-
--- Lightweight blur implementation
-local function CreateLightweightBlur(parent)
-    if RabbitCore._performance.Disable3DBlur then
-        local blur = Instance.new("Frame")
-        blur.Size = UDim2.fromScale(1, 1)
-        blur.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        blur.BackgroundTransparency = 0.5
-        blur.BorderSizePixel = 0
-        blur.Parent = parent
-        return blur
-    else
-        local blur = Instance.new("BlurEffect")
-        blur.Size = 20
-        blur.Parent = game:GetService("Lighting")
-        return blur
-    end
-end
 local Localization = game:GetService("LocalizationService")
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
@@ -2252,11 +2166,10 @@ function RabbitCore:Notification(data) -- action e.g open messages
 		newNotification.Visible = false
 		BlurModule(newNotification)
 
-	-- Set Data
-	newNotification.Title.Text = tostring(data.Title)
-	newNotification.Description.Text = tostring(data.Content)
-	-- Safely assign icon (prevents nil/table assignment errors)
-	SafeAssignImage(newNotification.Icon, data.Icon, data.ImageSource)
+		-- Set Data
+		newNotification.Title.Text = data.Title
+		newNotification.Description.Text = data.Content 
+		newNotification.Icon.Image = GetIcon(data.Icon, data.ImageSource)
 
 		-- Set initial transparency values
 		newNotification.BackgroundTransparency = 1
@@ -2435,10 +2348,9 @@ function RabbitCore:CreateWindow(WindowSettings)
 
 	local Window = { Bind = Enum.KeyCode.K, CurrentTab = nil, State = true, Size = false, Settings = nil }
 
-	Main.Title.Title.Text = tostring(WindowSettings.Name)
-	Main.Title.subtitle.Text = tostring(WindowSettings.Subtitle)
-	-- Use SafeAssignImage for the main logo so numeric/custom ids and lucide tables work
-	SafeAssignImage(Main.Logo, WindowSettings.LogoID, "Custom")
+	Main.Title.Title.Text = WindowSettings.Name
+	Main.Title.subtitle.Text = WindowSettings.Subtitle
+	Main.Logo.Image = "rbxassetid://" .. WindowSettings.LogoID
 	Main.Visible = true
 	Main.BackgroundTransparency = 1
 	Main.Size = MainSize
@@ -2452,8 +2364,8 @@ function RabbitCore:CreateWindow(WindowSettings)
 	tween(Elements.Parent, {BackgroundTransparency = 1})
 	Elements.Parent.Visible = false
 
-	LoadingFrame.Frame.Frame.Title.Text = tostring(WindowSettings.LoadingTitle)
-	LoadingFrame.Frame.Frame.Subtitle.Text = tostring(WindowSettings.LoadingSubtitle)
+	LoadingFrame.Frame.Frame.Title.Text = WindowSettings.LoadingTitle
+	LoadingFrame.Frame.Frame.Subtitle.Text = WindowSettings.LoadingSubtitle
 	LoadingFrame.Version.Text = LoadingFrame.Frame.Frame.Title.Text == "RabbitCore Interface Suite" and Release or "RabbitCore UI"
 
 	Navigation.Player.icon.ImageLabel.Image = Players:GetUserThumbnailAsync(Players.LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
@@ -2687,7 +2599,7 @@ function RabbitCore:CreateWindow(WindowSettings)
 		local HomeTabButton = Navigation.Tabs.Home
 		HomeTabButton.Visible = true
 		if HomeTabSettings.Icon == 2 then
-			SafeAssignImage(HomeTabButton.ImageLabel, "dashboard", "Material")
+			HomeTabButton.ImageLabel.Image = GetIcon("dashboard", "Material")
 		end
 
 		local HomeTabPage = Elements.Home
@@ -2858,17 +2770,17 @@ function RabbitCore:CreateWindow(WindowSettings)
 
 		local TabButton = Navigation.Tabs["InActive Template"]:Clone()
 
-	TabButton.Name = tostring(TabSettings.Name)
-	TabButton.TextLabel.Text = tostring(TabSettings.Name)
+		TabButton.Name = TabSettings.Name
+		TabButton.TextLabel.Text = TabSettings.Name
 		TabButton.Parent = Navigation.Tabs
-	SafeAssignImage(TabButton.ImageLabel, TabSettings.Icon, TabSettings.ImageSource)
+		TabButton.ImageLabel.Image = GetIcon(TabSettings.Icon, TabSettings.ImageSource)
 
 		TabButton.Visible = true
 
 		local TabPage = Elements.Template:Clone()
 		TabPage.Name = TabSettings.Name
-	TabPage.Title.Visible = TabSettings.ShowTitle
-	TabPage.Title.Text = tostring(TabSettings.Name)
+		TabPage.Title.Visible = TabSettings.ShowTitle
+		TabPage.Title.Text = TabSettings.Name
 		TabPage.Visible = true
 
 		Tab.Page = TabPage
@@ -2920,22 +2832,16 @@ function RabbitCore:CreateWindow(WindowSettings)
 		FirstTab = false
 
 		-- Section
-		function Tab:CreateSection(name)
+		function Tab:CreateSection(name : string)
 
 			local Section = {}
 
-			-- Accept either a string or a table { Name = "..." }
-			local sectionName
-			if type(name) == "table" then
-				sectionName = tostring(name.Name or name.Text or "Section")
-			else
-				sectionName = tostring(name or "Section")
-			end
+			if name == nil then name = "Section" end
 
-			Section.Name = sectionName
+			Section.Name = name
 
 			local Sectiont = Elements.Template.Section:Clone()
-			Sectiont.Text = sectionName
+			Sectiont.Text = name
 			Sectiont.Visible = true
 			Sectiont.Parent = TabPage
 			local TabPage = Sectiont.Frame
@@ -2944,13 +2850,7 @@ function RabbitCore:CreateWindow(WindowSettings)
 			tween(Sectiont, {TextTransparency = 0})
 
 			function Section:Set(NewSection)
-				if type(NewSection) == "table" then
-					Sectiont.Text = tostring(NewSection.Name or NewSection.Text or NewSection)
-					Section.Name = tostring(NewSection.Name or NewSection.Text or NewSection)
-				else
-					Sectiont.Text = tostring(NewSection)
-					Section.Name = tostring(NewSection)
-				end
+				Sectiont.Text = NewSection
 			end
 
 			function Section:Destroy()
@@ -2991,10 +2891,10 @@ function RabbitCore:CreateWindow(WindowSettings)
 				else
 					Button = Elements.Template.ButtonDesc:Clone()
 				end
-				Button.Name = tostring(ButtonSettings.Name)
-				Button.Title.Text = tostring(ButtonSettings.Name)
-				if ButtonSettings.Description ~= nil and ButtonSettings.Description ~= "" and Button.Desc ~= nil then
-					Button.Desc.Text = tostring(ButtonSettings.Description)
+				Button.Name = ButtonSettings.Name
+				Button.Title.Text = ButtonSettings.Name
+				if ButtonSettings.Description ~= nil and ButtonSettings.Description ~= "" then
+					Button.Desc.Text = ButtonSettings.Description
 				end
 				Button.Visible = true
 				Button.Parent = TabPage
@@ -3022,7 +2922,7 @@ function RabbitCore:CreateWindow(WindowSettings)
 						Button.Title.Text = "Callback Error"
 						print("RabbitCore Interface Suite | "..ButtonSettings.Name.." Callback Error " ..tostring(Response))
 						wait(0.5)
-						Button.Title.Text = tostring(ButtonSettings.Name)
+						Button.Title.Text = ButtonSettings.Name
 						TweenService:Create(Button, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.5}):Play()
 						TweenService:Create(Button, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(32, 30, 38)}):Play()
 						TweenService:Create(Button.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0.5}):Play()
@@ -3057,10 +2957,10 @@ function RabbitCore:CreateWindow(WindowSettings)
 					ButtonSettings = ButtonSettings2
 					ButtonV.Settings = ButtonSettings2
 
-					Button.Name = tostring(ButtonSettings.Name)
-					Button.Title.Text = tostring(ButtonSettings.Name)
+					Button.Name = ButtonSettings.Name
+					Button.Title.Text = ButtonSettings.Name
 					if ButtonSettings.Description ~= nil and ButtonSettings.Description ~= "" and Button.Desc ~= nil then
-						Button.Desc.Text = tostring(ButtonSettings.Description)
+						Button.Desc.Text = ButtonSettings.Description
 					end
 				end
 
@@ -6762,12 +6662,7 @@ function RabbitCore:CreateWindow(WindowSettings)
 
 				local success, err = RabbitCore:LoadConfig(name)
 				if not success then
-					-- Make RabbitCore callable
-return setmetatable(RabbitCore, {
-    __call = function(self, ...)
-        return self:CreateWindow(...)
-    end
-}):Notification({
+					return RabbitCore:Notification({
 						Title = "Interface",
 						Icon = "sparkle",
 						ImageSource = "Material",
